@@ -92,7 +92,14 @@ class ClientArg : Arg
                 return Arg.cCastExpr;
             case ArgType.NewId:
             case ArgType.Object:
-                return format("%s.proxy", paramName);
+                if (nullable)
+                {
+                    return format("%1$s is null ? null : %1$s.proxy", paramName);
+                }
+                else
+                {
+                    return format("%s.proxy", paramName);
+                }
         }
     }
 

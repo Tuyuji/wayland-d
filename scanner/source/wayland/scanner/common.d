@@ -901,6 +901,7 @@ string validDName(in string name) pure
         case "alias": return "alias_";
         case "class": return "class_";
         case "default": return "default_";
+        case "immutable": return "immutable_";
         case "interface": return "iface";
         case "version": return "version_";
         default:
