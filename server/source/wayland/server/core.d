@@ -147,6 +147,12 @@ class WlDisplayBase : Native!wl_display
         return _clients;
     }
 
+    /// Sets the maximum size of the connection buffer for newly accepted clients.
+    void setDefaultMaxBufferSize(size_t maxBufferSize)
+    {
+        wl_display_set_default_max_buffer_size(native, maxBufferSize);
+    }
+
     void initShm()
     {
         wl_display_init_shm(native);
