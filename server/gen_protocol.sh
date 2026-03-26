@@ -20,7 +20,8 @@ for d in ${DEPENDS[@]}; do
                         -c server \
                         -m wayland.server.protocol \
                         -i $PROTOCOL \
-                        -o $TARGET
+                        -o $TARGET \
+                        --passthrough wl_callback,wl_region
         exit $?
     fi
 done
