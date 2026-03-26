@@ -59,6 +59,7 @@ class WlSignal : Native!wl_signal
     {
         wl_signal_add(native, listener.native);
         _listeners ~= listener;
+        _listeners.assumeSafeAppend();
     }
 
     WlListener get(WlListener.NotifyDg notify)
@@ -83,21 +84,26 @@ class Signal(Args...)
 {
     alias Listener = void delegate(Args args);
 
-    private Listener[] _listeners;
+    private Listener _first;
+    private Listener[] _rest;
 
     this() {}
 
     void add(Listener listener)
     {
-        _listeners ~= listener;
+        if (_first is null)
+            _first = listener;
+        else
+        {
+            _rest ~= listener;
+            _rest.assumeSafeAppend();
+        }
     }
 
     void emit(Args args)
     {
-        foreach(l; _listeners)
-        {
-            l(args);
-        }
+        if (_first !is null) _first(args);
+        foreach (l; _rest) l(args);
     }
 }
 
@@ -105,12 +111,12 @@ private extern(C) nothrow
 {
     void wl_d_listener_notify(wl_listener* l, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto dl = cast(WlListener)(
                 cast(void*)l - WlListener._native.offsetof
             );
             assert(dl && (l is &dl._native));
             if (dl._notify) dl._notify(data);
-        });
+        }));
     }
 }

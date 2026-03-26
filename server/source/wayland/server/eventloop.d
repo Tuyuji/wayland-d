@@ -151,13 +151,31 @@ class WlSignalEventSource : WlEventSource
 class WlIdleEventSource : WlEventSource
 {
     private WlEventLoop.IdleDg dg;
+    private wl_event_loop* _loop;
 
     this (wl_event_loop* nativeLoop, WlEventLoop.IdleDg dg)
     {
         this.dg = dg;
+        _loop = nativeLoop;
         super(wl_event_loop_add_idle(
             nativeLoop, &wl_d_eventloop_idle, cast(void*)this
         ));
+    }
+
+    /// Whether a dispatch is pending. False after the idle fires (libwayland
+    /// auto-frees the source on dispatch) and before the next reschedule().
+    @property bool pending() const { return _native !is null; }
+
+    /// Re-arm the idle source. No-op if already pending.
+    /// Lets callers reuse the same D object across multiple one-shot idles
+    /// instead of allocating a new WlIdleEventSource each time.
+    void reschedule()
+    {
+        if (_native !is null)
+            return;
+        _native = wl_event_loop_add_idle(
+            _loop, &wl_d_eventloop_idle, cast(void*)this
+        );
     }
 }
 
@@ -167,43 +185,44 @@ private extern(C) nothrow
 
     void wl_d_eventloop_destroy(wl_listener*, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto el = cast(WlEventLoop)ObjectCache.get(data);
             assert(el, "wl_d_eventloop_destroy: could not get event loop from cache");
             if (el._onDestroy) el._onDestroy(el);
             ObjectCache.remove(data);
-        });
+        }));
     }
 
     int wl_d_eventloop_fd(int fd, uint mask, void* data)
     {
-        return nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto src = cast(WlFdEventSource)data;
             return src.dg(fd, mask);
-        });
+        }));
     }
 
     int wl_d_eventloop_timer(void* data)
     {
-        return nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto src = cast(WlTimerEventSource)data;
             return src.dg();
-        });
+        }));
     }
 
     int wl_d_eventloop_signal(int sigNumber, void* data)
     {
-        return nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto src = cast(WlSignalEventSource)data;
             return src.dg(sigNumber);
-        });
+        }));
     }
 
     void wl_d_eventloop_idle(void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto src = cast(WlIdleEventSource)data;
+            src._native = null; // libwayland auto-frees the source on dispatch
             src.dg();
-        });
+        }));
     }
 }

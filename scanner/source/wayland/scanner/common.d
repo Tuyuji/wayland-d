@@ -635,6 +635,10 @@ abstract class Interface
     // protocal eventually set to false after all interfaces are parsed
     bool isGlobal = true;
 
+    /// Interfaces in this list have their object args passed as wl_resource*
+    /// in generated stubs instead of going through ObjectCache.
+    /// Set before XML parsing via --passthrough on the CLI.
+    static string[] passthroughNames;
 
     private static Interface[string] ifaceMap;
 

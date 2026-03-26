@@ -89,6 +89,26 @@ auto nothrowFnWrapper(alias fn)() nothrow
     }
 }
 
+/// Generates a nothrow try-catch as a string mixin.
+/// Use in place of nothrowFnWrapper to avoid heap closure allocation.
+/// Usage: mixin(nothrowWrap(q{ return src.dg(); }));
+string nothrowWrap(string body) pure nothrow
+{
+    return "try { " ~ body ~ " } "
+        ~ "catch(Exception ex) { "
+        ~ "import std.exception : collectException; "
+        ~ "import std.stdio : stderr; "
+        ~ `collectException(stderr.writeln("wayland-d: error in listener stub: " ~ ex.msg)); } `
+        ~ "catch(Throwable err) { "
+        ~ "import core.runtime : Runtime; "
+        ~ "import core.stdc.stdlib : exit; "
+        ~ "import std.exception : collectException; "
+        ~ "import std.stdio : stderr; "
+        ~ `collectException(stderr.writeln("wayland-d: aborting due to error in listener stub: " ~ err.msg)); `
+        ~ "collectException(Runtime.terminate()); exit(1); } "
+        ~ "static if (!is(typeof(return) == void)) return typeof(return).init;";
+}
+
 
 
 /// static cache of objects that are looked-up by the address of their native

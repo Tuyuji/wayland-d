@@ -164,6 +164,11 @@ class ServerMessage : Message
                     "string iface", "uint ver", format("uint %s", a.paramName)
                 ];
             }
+            else if (a.type == ArgType.Object &&
+                     Interface.passthroughNames.canFind(a.iface))
+            {
+                rtArgs ~= format("wl_resource* %s", a.paramName);
+            }
             else {
                 rtArgs ~= format("%s %s", a.dType, a.paramName);
             }
@@ -176,6 +181,8 @@ class ServerMessage : Message
         final switch(reqType)
         {
         case ReqType.newObj:
+            if (Interface.passthroughNames.canFind(reqRet.iface))
+                return "void";
             return ifaceDName(reqRet.iface);
         case ReqType.dynObj:
             return "WlResource";
@@ -221,8 +228,10 @@ class ServerMessage : Message
             if (a.type == ArgType.Object)
             {
                 rtArgs ~= format("wl_resource* %s", a.paramName);
-                // TODO: check if wl_resource_get_user_data could work here
-                exprs ~= format("cast(%s)ObjectCache.get(%s)", a.dType, a.paramName);
+                if (Interface.passthroughNames.canFind(a.iface))
+                    exprs ~= a.paramName;  // pass wl_resource* directly
+                else
+                    exprs ~= format("cast(%s)ObjectCache.get(%s)", a.dType, a.paramName);
             }
             else if (a.type == ArgType.NewId && !a.iface.length)
             {
@@ -240,14 +249,14 @@ class ServerMessage : Message
         }
         writeFnSig(sf, "void", privRqListenerStubName, rtArgs);
         sf.bracedBlock!({
-            sf.writeln("nothrowFnWrapper!({");
+            sf.writeln("mixin(nothrowWrap(q{");
             sf.indentedBlock!({
                 immutable resType = svIface.selfResType(No.local);
                 sf.writeln("auto _res = cast(%s)wl_resource_get_user_data(natRes);", resType);
                 immutable outer = iface.isGlobal ? ".outer" : "";
                 writeFnExpr(sf, format("_res%s.%s", outer, reqMethodName), exprs);
             });
-            sf.writeln("});");
+            sf.writeln("}));");
         });
     }
 
@@ -503,14 +512,14 @@ class ServerInterface : Interface
     {
         sf.writeln("void %s(wl_client* natCl, void* data, uint ver, uint id)", bindFuncName);
         sf.bracedBlock!({
-            sf.writeln("nothrowFnWrapper!({");
+            sf.writeln("mixin(nothrowWrap(q{");
             sf.indentedBlock!({
                 sf.writeln("auto g = cast(%s)data;", dName);
                 sf.writeln("auto cl = cast(WlClient)ObjectCache.get(natCl);");
                 sf.writeln(`assert(g && cl, "%s: could not get global or client from cache");`, bindFuncName);
                 sf.writeln("g.bind(cl, ver, id);");
             });
-            sf.writeln("});");
+            sf.writeln("}));");
         });
     }
 

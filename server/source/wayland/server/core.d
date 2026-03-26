@@ -347,17 +347,17 @@ private extern(C) nothrow
 {
     void wl_d_display_destroy(wl_listener*, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto dpy = cast(WlDisplayBase)ObjectCache.get(data);
             assert(dpy, "wl_d_display_destroy: could not get display from cache");
             if (dpy._destroySig) dpy._destroySig.emit();
             ObjectCache.remove(data);
-        });
+        }));
     }
 
     void wl_d_client_created(wl_listener*, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto natCl = cast(wl_client*)data;
             auto natDpy = wl_client_get_display(natCl);
             auto dpy = cast(WlDisplayBase)ObjectCache.get(natDpy);
@@ -366,12 +366,12 @@ private extern(C) nothrow
             auto cl = new WlClient(natCl);
             dpy._clients ~= cl;
             if (dpy._clientCreatedSig) dpy._clientCreatedSig.emit(cl);
-        });
+        }));
     }
 
     void wl_d_client_destroy(wl_listener*, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto natCl = cast(wl_client*)data;
             auto natDpy = wl_client_get_display(natCl);
             auto dpy = cast(WlDisplayBase)ObjectCache.get(natDpy);
@@ -383,29 +383,29 @@ private extern(C) nothrow
             if (cl._destroySig) cl._destroySig.emit(cl);
             dpy._clients = dpy._clients.remove!(c => c is cl);
             ObjectCache.remove(natCl);
-        });
+        }));
     }
 
     void wl_d_client_resource_created(wl_listener*, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto natRes = cast(wl_resource*)data;
             auto natCl = wl_resource_get_client(natRes);
             auto cl = cast(WlClient)ObjectCache.get(natCl);
             assert(cl);
             if (cl._nativeResourceCreatedSig) cl._nativeResourceCreatedSig.emit(natRes);
-        });
+        }));
     }
 
     void wl_d_resource_destroy(wl_listener*, void* data)
     {
-        nothrowFnWrapper!({
+        mixin(nothrowWrap(q{
             auto natRes = cast(wl_resource*)data;
 
             auto res = cast(WlResource)ObjectCache.get(natRes);
             if (res && res._destroySig) res._destroySig.emit(res);
 
             ObjectCache.remove(natRes);
-        });
+        }));
     }
 }

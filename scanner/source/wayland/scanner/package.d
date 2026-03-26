@@ -27,10 +27,11 @@ int main(string[] args)
     opt.cmdLine = args.join(" ");
     auto optHandler = getopt (
         args,
-        "code|c",   "generated code: client|server [client]", &opt.code,
-        "input|i",  "input file [stdin]", &opt.inFile,
-        "output|o", "output file [stdout]", &opt.outFile,
-        "module|m", "D module name (required)", &opt.moduleName,
+        "code|c",       "generated code: client|server [client]", &opt.code,
+        "input|i",      "input file [stdin]", &opt.inFile,
+        "output|o",     "output file [stdout]", &opt.outFile,
+        "module|m",     "D module name (required)", &opt.moduleName,
+        "passthrough|p","comma-separated interfaces whose object args are passed as wl_resource* (no ObjectCache lookup)", &opt.passthroughArg,
     );
 
     if (optHandler.helpWanted)
@@ -53,6 +54,13 @@ int main(string[] args)
             optHandler.options
         );
         return 1;
+    }
+
+    if (!opt.passthroughArg.empty)
+    {
+        import std.string : split;
+        import wayland.scanner.common : ScannerInterface = Interface;
+        ScannerInterface.passthroughNames = opt.passthroughArg.split(",");
     }
 
     try
@@ -98,6 +106,7 @@ class Options
     string inFile;
     string outFile;
     string moduleName;
+    string passthroughArg;
 
     GenCode code;
 }
